@@ -1,6 +1,6 @@
 import { createContext, useReducer } from 'react'
-
 import githubReducer from './GithubReducer'
+
 const GithubContext = createContext()
 
 const GITHUB_URL = process.env.REACT_APP_GITHUB_URL
@@ -9,11 +9,14 @@ const GITHUB_TOKEN = process.env.REACT_APP_GITHUB_TOKEN
 export const GithubProvider = ({ children }) => {
   const initialState = {
     users: [],
+    user: {},
+    repos: [],
     loading: false,
   }
 
   const [state, dispatch] = useReducer(githubReducer, initialState)
 
+  //search fir users
   const searchUsers = async (text) => {
     setLoading()
     const params = new URLSearchParams({
@@ -31,6 +34,48 @@ export const GithubProvider = ({ children }) => {
       payload: items,
     })
   }
+
+  //get one user
+  const getUser = async (login) => {
+    setLoading()
+
+    const responce = await fetch(`${GITHUB_URL}/users/${login}`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
+    })
+    if (responce.status === 400) {
+      window.location = '/notfound'
+    } else {
+      const data = await responce.json()
+
+      dispatch({
+        type: 'GET_USER',
+        payload: data,
+      })
+    }
+  }
+
+  //get user repos
+  const getUserRepos = async (login) => {
+    setLoading()
+    // const params = new URLSearchParams({
+    //   sort: 'created',
+    //   per_page: 10,
+    // })
+    const responce = await fetch(`${GITHUB_URL}/users/${login}/repos`, {
+      headers: {
+        Authorization: `token ${GITHUB_TOKEN}`,
+      },
+    })
+    const data = await responce.json()
+    dispatch({
+      type: 'GET_REPOS',
+      payload: data,
+    })
+  }
+
+  //clear users frim state
   const clearUsers = () => dispatch({ type: 'CLEAR_USERS' })
 
   //set loading
@@ -41,8 +86,12 @@ export const GithubProvider = ({ children }) => {
       value={{
         users: state.users,
         loading: state.loading,
+        user: state.user,
+        repos: state.repos,
         searchUsers,
         clearUsers,
+        getUser,
+        getUserRepos,
       }}
     >
       {children}
